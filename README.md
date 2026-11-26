@@ -1,4 +1,4 @@
-# Bock — version web test
+# Bock — version web
 
 Gestion du tournoi annuel de lancer de bouchons : saison à la ronde (3 de 5), séries éliminatoires (grande finale 4 de 7) et consolation. Il s'agit de la reprise du logiciel MS Access `Bock_win v22`, avec les 38 tournois importés.
 
