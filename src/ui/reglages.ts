@@ -2,7 +2,8 @@
 import { avis, h, modale, type Child } from '../dom';
 import { dateCourte, ilYa } from '../format';
 import type { BockData } from '../model';
-import { store } from '../store';
+import { verifierIntegrite } from '../engine/integrite';
+import { signalerErreurs, store } from '../store';
 import { champ, titre } from './commun';
 
 export function pageReglages(): Child {
@@ -49,6 +50,9 @@ export function pageReglages(): Child {
     titre('Réglages'),
     h('p', null, 'Cet appareil est le ', h('b', null, 'poste de saisie'), '. Les données sont conservées dans ce navigateur, même sans connexion.'),
     h('p', { class: 'discret' }, resume),
+    store.erreursLocales.length
+      ? h('p', { class: 'avertissement' }, `${store.erreursLocales.length} problème(s) d’intégrité dans les données de ce navigateur : la publication est bloquée. `, h('button', { type: 'button', class: 'mini', onclick: () => signalerErreurs('Problèmes d’intégrité', store.erreursLocales) }, 'Voir'))
+      : null,
     h('h2', null, 'Publication dans S3'),
     h(
       'p',
@@ -125,20 +129,27 @@ async function importer(e: Event) {
   if (!f) return;
   try {
     const d = JSON.parse(await f.text()) as BockData;
-    if (!Array.isArray(d.tournois) || !Array.isArray(d.matchs) || !Array.isArray(d.joueurs)) throw new Error('format');
+    const erreurs = verifierIntegrite(d);
+    if (erreurs.length) return signalerErreurs(`Sauvegarde refusée : ${erreurs.length} problème(s) d’intégrité`, erreurs);
     modale('Restaurer cette sauvegarde ?', h('p', null, `${d.tournois.length} tournois, ${d.matchs.length} matchs. Les données actuelles seront remplacées.`), [
       { texte: 'Annuler', action: () => {} },
       {
         texte: 'Restaurer',
         classe: 'danger',
         action: () => {
-          store.remplacer(d);
+          const refus = store.remplacer(d);
+          if (refus.length) {
+            signalerErreurs('Sauvegarde refusée', refus);
+            return;
+          }
           if (store.config.autoPublier) void store.publier();
           avis('Sauvegarde restaurée');
         },
       },
     ]);
   } catch {
-    avis('Fichier invalide', 'erreur');
+    avis('Fichier invalide (JSON illisible)', 'erreur');
+  } finally {
+    (e.target as HTMLInputElement).value = '';
   }
 }

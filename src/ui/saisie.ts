@@ -1,6 +1,7 @@
 // Saisie d'un match (port de frm_match)
 import { nom, nomCourt } from '../calc';
 import { avis, h, modale } from '../dom';
+import { blocageMatch } from '../engine/integrite';
 import { estBlanchissage, estSupplementaire, scoreParDefaut, scoreValide } from '../engine/regles';
 import { maintenantLocal } from '../format';
 import type { BockData, Match, TypeMatch } from '../model';
@@ -14,8 +15,6 @@ export interface ContexteSaisie {
   /** Pour les tableaux à élimination */
   ronde?: number;
   idMatch?: number;
-  /** Vérification avant d'effacer / modifier (ex. ronde suivante déjà jouée) */
-  verrou?: string;
 }
 
 /** Trouve le match correspondant au contexte (paire de joueurs ou position dans le tableau). */
@@ -31,6 +30,7 @@ export function ouvrirSaisie(c: ContexteSaisie): void {
   const t = store.data.tournois.find((x) => x.id === c.tournoi)!;
   const max = t.pointsGagnants[c.type];
   const existant = trouverMatch(store.data, c);
+  const verrou = existant ? blocageMatch(store.data, existant) : undefined;
   const s1Init = existant ? (existant.gagnant === c.joueur1 ? existant.scoreG : existant.scoreP) : '';
   const s2Init = existant ? (existant.gagnant === c.joueur2 ? existant.scoreG : existant.scoreP) : '';
   const dh = existant?.dateHeure || maintenantLocal();
@@ -71,15 +71,15 @@ export function ouvrirSaisie(c: ContexteSaisie): void {
     h('div', { class: 'saisie-joueur' }, h('span', { class: 'saisie-nom', title: nom(j) }, nomCourt(j)), input);
 
   const enregistrer = (a: number, b: number): boolean => {
-    if (c.verrou) {
-      avis(c.verrou, 'erreur');
+    if (verrou) {
+      avis(verrou, 'erreur');
       return false;
     }
     if (!scoreValide(max, a, b)) {
       message.textContent = `Pointage invalide pour un match à ${max} points`;
       return false;
     }
-    store.modifier((d) => {
+    return store.modifier((d) => {
       const ex = trouverMatch(d, c);
       d.matchs = d.matchs.filter((m) => m !== ex);
       if (a === 0 && b === 0) return;
@@ -103,7 +103,6 @@ export function ouvrirSaisie(c: ContexteSaisie): void {
       if (rem) m.remarque = rem;
       d.matchs.push(m);
     });
-    return true;
   };
 
   const actions: Parameters<typeof modale>[2] = [
@@ -111,9 +110,9 @@ export function ouvrirSaisie(c: ContexteSaisie): void {
   ];
   if (existant)
     actions.unshift({
-      texte: 'Effacer le match',
+      texte: 'Supprimer le match',
       classe: 'danger',
-      action: () => (confirm('Effacer ce match ?') ? enregistrer(0, 0) : false),
+      action: () => (confirm(`Supprimer le match ${nomCourt(existant.gagnant)} ${existant.scoreG}-${existant.scoreP} ${nomCourt(existant.perdant)} ?`) ? enregistrer(0, 0) : false),
     });
   actions.push({ texte: 'Enregistrer', classe: 'principal', action: () => enregistrer(lire(in1), lire(in2)) });
 
@@ -123,7 +122,7 @@ export function ouvrirSaisie(c: ContexteSaisie): void {
     h(
       'form',
       { class: 'saisie', onsubmit: (e: Event) => e.preventDefault() },
-      c.verrou ? h('p', { class: 'erreur' }, c.verrou) : null,
+      verrou ? h('p', { class: 'erreur' }, verrou) : null,
       h('div', { class: 'saisie-scores' }, ligne(c.joueur1, in1), h('span', { class: 'contre' }, 'contre'), ligne(c.joueur2, in2)),
       badges,
       message,

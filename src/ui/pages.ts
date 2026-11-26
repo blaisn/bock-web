@@ -1,9 +1,14 @@
 // Pages : tournois, joueurs, fiche d'un joueur, classement à vie, face-à-face, matchs
 import { champions, classement, faceAFace, historiqueJoueur, joueur, nom, nomCourt, statsVie, type StatsVie, tournoisRecentsDabord } from '../calc';
-import { h, type Child } from '../dom';
+import { avis, h, modale, type Child } from '../dom';
+import { blocageMatch } from '../engine/integrite';
 import { cote, type Fiche, pourcentPoints } from '../engine/fiche';
 import { annee, dateCourte, heure, signe, trois } from '../format';
-import type { Joueur, TypeMatch } from '../model';
+import type { Joueur, Match, TypeMatch } from '../model';
+
+/** Même match (comparaison par contenu : les objets sont copiés à chaque transaction) */
+const memeMatch = (p: Match, q: Match) =>
+  p.tournoi === q.tournoi && p.type === q.type && p.gagnant === q.gagnant && p.perdant === q.perdant && p.ronde === q.ronde && p.idMatch === q.idMatch;
 import { store } from '../store';
 import { lienJoueur, lienTournoi, tableTriable, tdFiche, thFiche, titre } from './commun';
 import { editerJoueur, nouveauTournoi } from './edition';
@@ -223,7 +228,7 @@ export function pageFace(id?: number): Child {
           { titre: 'P0', num: true, cle: (x) => x.fiche.P0, rendu: (x) => x.fiche.P0 || '' },
           { titre: 'GS', num: true, cle: (x) => x.fiche.GS, rendu: (x) => x.fiche.GS || '' },
           { titre: 'PS', num: true, cle: (x) => x.fiche.PS, rendu: (x) => x.fiche.PS || '' },
-          { titre: '', rendu: (x) => h('a', { href: `#/matchs/${id}/${x.adversaire}`, class: 'discret' }, 'matchs') },
+          { titre: '', rendu: (x) => h('a', { href: `#/matchs/j/${id}/${x.adversaire}`, class: 'discret' }, 'matchs') },
         ],
         lignes,
         { col: 3, desc: true },
@@ -236,12 +241,34 @@ export function pageFace(id?: number): Child {
 
 // ---------- Matchs ----------
 
-export function pageMatchs(a?: number, b?: number): Child {
-  const etat = { a, b, tournoi: 0, type: '' };
-  const joueurs = [...store.data.joueurs].sort((x, y) => x.nomCourt.localeCompare(y.nomCourt, 'fr'));
+// Filtres conservés entre les rafraîchissements (ex. après une suppression)
+const etatMatchs: { a?: number; b?: number; tournoi: number; type: string; route: string } = { tournoi: 0, type: '', route: '' };
+
+/** Routes : #/matchs, #/matchs/j/A[/B], #/matchs/t/ID */
+export function pageMatchs(param?: string, x?: number, y?: number): Child {
+  const route = location.hash;
+  if (route !== etatMatchs.route) {
+    // Nouvelle navigation : les filtres viennent de l'adresse
+    Object.assign(etatMatchs, { route, a: undefined, b: undefined, tournoi: 0, type: '' });
+    if (param === 'j') Object.assign(etatMatchs, { a: x, b: y });
+    if (param === 't') etatMatchs.tournoi = x ?? 0;
+  }
+  const etat = etatMatchs;
+  const joueurs = [...store.data.joueurs].sort((p, q) => p.nomCourt.localeCompare(q.nomCourt, 'fr'));
   const optJ = (v?: number) => [h('option', { value: '' }, 'tous'), joueurs.map((j) => h('option', { value: j.id, selected: j.id === v }, j.nomCourt))];
   const zone = h('div');
   const num = (e: Event) => Number((e.target as HTMLSelectElement).value) || undefined;
+
+  const supprimer = (m: Match) => {
+    const blocage = blocageMatch(store.data, m);
+    if (blocage) return avis(blocage, 'erreur');
+    const t = store.data.tournois.find((z) => z.id === m.tournoi)!;
+    modale('Supprimer ce match ?', h('p', null, `${nomCourt(m.gagnant)} ${m.scoreG}-${m.scoreP} ${nomCourt(m.perdant)} — ${m.type}, ${annee(t.date)} ${t.lieu}`), [
+      { texte: 'Annuler', action: () => {} },
+      { texte: 'Supprimer', classe: 'danger', action: () => store.modifier((d) => { d.matchs = d.matchs.filter((z) => !memeMatch(z, m)); }) },
+    ]);
+  };
+
   const rendre = () => {
     let l = store.data.matchs.filter(
       (m) =>
@@ -251,7 +278,7 @@ export function pageMatchs(a?: number, b?: number): Child {
         (!etat.b || m.gagnant === etat.b || m.perdant === etat.b),
     );
     const total = l.length;
-    l = [...l].sort((x, y) => (y.dateHeure ?? '').localeCompare(x.dateHeure ?? '') || y.tournoi - x.tournoi).slice(0, 400);
+    l = [...l].sort((p, q) => (q.dateHeure ?? '').localeCompare(p.dateHeure ?? '') || q.tournoi - p.tournoi).slice(0, 400);
     const tn = new Map(store.data.tournois.map((t) => [t.id, t]));
     zone.replaceChildren(
       h('p', { class: 'discret' }, `${total} match${total > 1 ? 's' : ''}${total > l.length ? ` (${l.length} plus récents affichés)` : ''}`),
@@ -261,12 +288,13 @@ export function pageMatchs(a?: number, b?: number): Child {
         h(
           'table',
           { class: 'donnees' },
-          h('thead', null, h('tr', null, h('th', null, 'Tournoi'), h('th', null, 'Type'), h('th', null, 'Gagnant'), h('th', { class: 'num' }, 'Pointage'), h('th', null, 'Perdant'), h('th', null, ''), h('th', null, 'Heure'), h('th', null, 'Remarque'))),
+          h('thead', null, h('tr', null, h('th', null, 'Tournoi'), h('th', null, 'Type'), h('th', null, 'Gagnant'), h('th', { class: 'num' }, 'Pointage'), h('th', null, 'Perdant'), h('th', null, ''), h('th', null, 'Heure'), h('th', null, 'Remarque'), store.saisie ? h('th', null, '') : null)),
           h(
             'tbody',
             null,
             l.map((m) => {
               const t = tn.get(m.tournoi)!;
+              const blocage = store.saisie ? blocageMatch(store.data, m) : undefined;
               return h(
                 'tr',
                 null,
@@ -278,6 +306,9 @@ export function pageMatchs(a?: number, b?: number): Child {
                 h('td', { class: 'discret' }, [m.blanchissage ? 'blanchissage' : '', m.supplementaire ? 'supplémentaire' : ''].filter(Boolean).join(' ')),
                 h('td', { class: 'discret' }, heure(m.dateHeure) || ''),
                 h('td', { class: 'remarque' }, m.remarque ?? ''),
+                store.saisie
+                  ? h('td', null, h('button', { type: 'button', class: 'mini danger', disabled: Boolean(blocage), title: blocage ?? 'Supprimer ce match', onclick: () => supprimer(m) }, 'Supprimer'))
+                  : null,
               );
             }),
           ),
@@ -294,10 +325,10 @@ export function pageMatchs(a?: number, b?: number): Child {
     h(
       'div',
       { class: 'filtres' },
-      h('label', null, 'Tournoi ', h('select', { onchange: (e: Event) => { etat.tournoi = num(e) ?? 0; rendre(); } }, h('option', { value: '' }, 'tous'), ts.map((t) => h('option', { value: t.id }, `${annee(t.date)} ${t.lieu}`)))),
-      h('label', null, 'Type ', h('select', { onchange: (e: Event) => { etat.type = (e.target as HTMLSelectElement).value; rendre(); } }, h('option', { value: '' }, 'tous'), ['Saison', 'Séries', 'Consolation'].map((x) => h('option', { value: x }, x)))),
-      h('label', null, 'Joueur ', h('select', { onchange: (e: Event) => { etat.a = num(e); rendre(); } }, optJ(a))),
-      h('label', null, 'contre ', h('select', { onchange: (e: Event) => { etat.b = num(e); rendre(); } }, optJ(b))),
+      h('label', null, 'Tournoi ', h('select', { onchange: (e: Event) => { etat.tournoi = num(e) ?? 0; rendre(); } }, h('option', { value: '' }, 'tous'), ts.map((t) => h('option', { value: t.id, selected: t.id === etat.tournoi }, `${annee(t.date)} ${t.lieu}`)))),
+      h('label', null, 'Type ', h('select', { onchange: (e: Event) => { etat.type = (e.target as HTMLSelectElement).value; rendre(); } }, h('option', { value: '' }, 'tous'), ['Saison', 'Séries', 'Consolation'].map((z) => h('option', { value: z, selected: z === etat.type }, z)))),
+      h('label', null, 'Joueur ', h('select', { onchange: (e: Event) => { etat.a = num(e); rendre(); } }, optJ(etat.a))),
+      h('label', null, 'contre ', h('select', { onchange: (e: Event) => { etat.b = num(e); rendre(); } }, optJ(etat.b))),
     ),
     zone,
   );

@@ -21,7 +21,7 @@ const NAV: [string, string][] = [
 const nav = h('nav', { class: 'principale' });
 
 function route(): Child {
-  const [, page, a, b] = (location.hash || '#/').split('/');
+  const [, page, a, b, c] = (location.hash || '#/').split('/');
   const n = (x?: string) => (x ? Number(x) : undefined);
   switch (page) {
     case '':
@@ -38,7 +38,7 @@ function route(): Child {
     case 'face':
       return pageFace(n(a));
     case 'matchs':
-      return pageMatchs(n(a), n(b));
+      return pageMatchs(a, n(b), n(c));
     case 'reglages':
       return pageReglages();
     default:
