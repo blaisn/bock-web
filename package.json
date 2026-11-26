@@ -1,0 +1,22 @@
+{
+  "name": "bock-web",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Gestion du tournoi annuel de lancer de bouchons (Bock), version web",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "aws4fetch": "^1.0.20"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.7",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1"
+  }
+}

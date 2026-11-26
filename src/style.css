@@ -1,0 +1,871 @@
+:root {
+  --fond: #f7f1e6;
+  --papier: #fffdf8;
+  --encre: #2b1d12;
+  --encre-douce: #6f5a48;
+  --ligne: #e3d6c2;
+  --ambre: #c8862d;
+  --ambre-fonce: #9a5f12;
+  --mousse: #f3e3b8;
+  --victoire: #2f7d4f;
+  --victoire-fond: #dcefe2;
+  --defaite: #a8402e;
+  --defaite-fond: #f6ddd6;
+  --nonjoue: #f2ece2;
+  --rayon: 10px;
+  --ombre: 0 1px 2px rgb(43 29 18 / 0.08), 0 4px 14px rgb(43 29 18 / 0.06);
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  color: var(--encre);
+  background: var(--fond);
+  -webkit-text-size-adjust: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+a {
+  color: var(--ambre-fonce);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+h1,
+h2,
+h3 {
+  font-family: Georgia, 'Iowan Old Style', serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+h2 {
+  font-size: 1.2rem;
+  margin: 1.6em 0 0.6em;
+}
+h3 {
+  font-size: 1rem;
+  margin: 1.2em 0 0.5em;
+}
+small,
+.discret {
+  color: var(--encre-douce);
+}
+.pre {
+  white-space: pre-line;
+}
+.fort {
+  font-weight: 650;
+}
+
+/* ---------- En-tête ---------- */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 1rem;
+  background: var(--encre);
+  color: #f7ead2;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #f7ead2;
+  font-family: Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+.logo:hover {
+  text-decoration: none;
+}
+.bouchon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, #e9c46a 0 55%, transparent 56%), repeating-conic-gradient(#c8962d 0 15deg, #9a6a1c 15deg 30deg);
+  box-shadow: 0 0 0 1px #00000040;
+}
+nav.principale {
+  display: flex;
+  gap: 0.15rem;
+  overflow-x: auto;
+  flex: 1;
+}
+nav.principale a {
+  color: #e8d9bf;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+nav.principale a.actif,
+nav.principale a:hover {
+  background: #ffffff1c;
+  color: #fff;
+  text-decoration: none;
+}
+.etat {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+}
+.pastille-etat {
+  padding: 0.2rem 0.55rem;
+  border-radius: 99px;
+  background: #ffffff1a;
+  white-space: nowrap;
+}
+.pastille-etat.ok {
+  background: #2f7d4f;
+}
+.pastille-etat.alerte {
+  background: #a8402e;
+}
+.pastille-etat.encours {
+  background: var(--ambre);
+}
+
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem 1rem 4rem;
+}
+
+.titre-page {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 0.5rem 0 1rem;
+}
+.titre-page h1 {
+  margin: 0;
+  flex: 1;
+  font-size: 1.6rem;
+}
+.titre-page h1 small {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.9rem;
+  font-weight: 400;
+}
+
+/* ---------- Boutons et formulaires ---------- */
+button,
+.bouton {
+  font: inherit;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--ligne);
+  background: var(--papier);
+  color: var(--encre);
+  cursor: pointer;
+  display: inline-block;
+}
+button:hover,
+.bouton:hover {
+  border-color: var(--ambre);
+  text-decoration: none;
+}
+button.principal {
+  background: var(--ambre-fonce);
+  border-color: var(--ambre-fonce);
+  color: #fff;
+}
+button.danger {
+  color: var(--defaite);
+  border-color: #e6b9ae;
+}
+button.mini {
+  padding: 0.15rem 0.5rem;
+  font-size: 0.8rem;
+}
+button.lien {
+  border: 0;
+  background: none;
+  color: var(--ambre-fonce);
+  padding: 0;
+}
+.boutons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+input,
+select,
+textarea {
+  font: inherit;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--ligne);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--encre);
+  max-width: 100%;
+}
+input.court {
+  width: 5em;
+}
+textarea {
+  width: 100%;
+}
+.formulaire {
+  display: grid;
+  gap: 0.7rem;
+  max-width: 520px;
+}
+.champ {
+  display: grid;
+  gap: 0.2rem;
+}
+.champ > span {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.champ small {
+  font-size: 0.78rem;
+}
+fieldset {
+  border: 1px solid var(--ligne);
+  border-radius: 8px;
+}
+.ligne {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.case-a-cocher {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.6rem 0;
+}
+.filtres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+.segments {
+  display: inline-flex;
+  border: 1px solid var(--ligne);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 0.7rem;
+  flex-wrap: wrap;
+}
+.segments button {
+  border: 0;
+  border-radius: 0;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+}
+.segments button.actif {
+  background: var(--encre);
+  color: #fff;
+}
+
+/* ---------- Tableaux ---------- */
+.defile {
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--papier);
+  border-radius: var(--rayon);
+  box-shadow: var(--ombre);
+}
+table {
+  border-collapse: collapse;
+}
+table.donnees {
+  min-width: 100%;
+  font-size: 0.88rem;
+}
+table.donnees th,
+table.donnees td {
+  padding: 0.4rem 0.55rem;
+  border-bottom: 1px solid var(--ligne);
+  text-align: left;
+  white-space: nowrap;
+}
+table.donnees thead th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--encre-douce);
+  background: #fbf6ec;
+  position: sticky;
+  top: 0;
+}
+table.donnees th.triable {
+  cursor: pointer;
+}
+table.donnees th.trie {
+  color: var(--ambre-fonce);
+}
+table.donnees tbody tr:hover {
+  background: #fbf3e3;
+}
+table.donnees .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+table.donnees td.remarque {
+  white-space: normal;
+  min-width: 12em;
+  color: var(--encre-douce);
+  font-size: 0.82rem;
+}
+table.donnees tr.total {
+  font-weight: 650;
+  background: #fbf6ec;
+}
+table.donnees.compact td {
+  padding: 0.25rem 0.4rem;
+}
+table.classement tr.coupure td {
+  border-bottom: 2px solid var(--ambre);
+}
+.statut {
+  font-weight: 700;
+  text-align: center;
+  width: 1.5em;
+}
+.statut-C {
+  color: var(--ambre-fonce);
+}
+.statut-s {
+  color: var(--victoire);
+}
+.statut-X {
+  color: var(--defaite);
+}
+.force {
+  color: var(--ambre);
+  margin-left: 1px;
+}
+.legende {
+  font-size: 0.8rem;
+  color: var(--encre-douce);
+  margin-top: 0.6rem;
+  line-height: 1.7;
+}
+.legende .res {
+  display: inline-block;
+  padding: 0 0.35rem;
+  border-radius: 4px;
+}
+
+/* Grille du round robin */
+table.grille {
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+}
+table.grille th,
+table.grille td {
+  border: 1px solid var(--ligne);
+  text-align: center;
+  min-width: 3.2em;
+  height: 2.4em;
+  padding: 0.2rem;
+}
+table.grille .coin {
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: var(--encre-douce);
+  position: sticky;
+  left: 0;
+  background: #fbf6ec;
+  z-index: 2;
+}
+table.grille .col-joueur {
+  background: #fbf6ec;
+  font-size: 0.78rem;
+  max-width: 5.5em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+table.grille .ligne-joueur {
+  position: sticky;
+  left: 0;
+  background: #fbf6ec;
+  text-align: left;
+  padding: 0 0.6rem;
+  white-space: nowrap;
+  z-index: 1;
+}
+td.diag {
+  background: repeating-linear-gradient(45deg, #efe6d6 0 4px, #f7f0e3 4px 8px);
+}
+.res.victoire {
+  background: var(--victoire-fond);
+  color: var(--victoire);
+  font-weight: 650;
+}
+.res.defaite {
+  background: var(--defaite-fond);
+  color: var(--defaite);
+}
+.res.nonjoue {
+  background: var(--nonjoue);
+  color: #c7b9a4;
+}
+.res.cliquable {
+  cursor: pointer;
+}
+.res.cliquable:hover {
+  outline: 2px solid var(--ambre);
+  outline-offset: -2px;
+}
+.res sup {
+  font-size: 0.62em;
+  margin-left: 1px;
+}
+.rem-ind {
+  color: var(--ambre);
+  margin-left: 1px;
+}
+.progression {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+}
+progress {
+  accent-color: var(--ambre-fonce);
+  width: 140px;
+}
+
+/* ---------- Tournoi ---------- */
+.palmares {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+.palme {
+  background: var(--papier);
+  border-radius: var(--rayon);
+  box-shadow: var(--ombre);
+  padding: 0.6rem 0.8rem;
+  display: grid;
+  gap: 0.15rem;
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+.palme:first-child {
+  background: linear-gradient(135deg, #fff6dc, #f3e3b8);
+}
+.palme.vide {
+  color: var(--encre-douce);
+}
+.palme-titre {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--encre-douce);
+  font-weight: 500;
+}
+nav.onglets {
+  display: flex;
+  gap: 0.2rem;
+  border-bottom: 1px solid var(--ligne);
+  margin-bottom: 1rem;
+  overflow-x: auto;
+}
+nav.onglets a {
+  padding: 0.5rem 0.85rem;
+  color: var(--encre-douce);
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+}
+nav.onglets a.actif {
+  color: var(--encre);
+  border-bottom-color: var(--ambre);
+  font-weight: 600;
+}
+nav.onglets a:hover {
+  text-decoration: none;
+  color: var(--encre);
+}
+.avertissement {
+  background: #fff3d6;
+  border-left: 4px solid var(--ambre);
+  padding: 0.5rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+.champion {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.vide {
+  color: var(--encre-douce);
+  font-style: italic;
+}
+.infos dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1rem;
+  background: var(--papier);
+  padding: 1rem;
+  border-radius: var(--rayon);
+  box-shadow: var(--ombre);
+}
+.infos dt {
+  font-weight: 600;
+  color: var(--encre-douce);
+}
+.infos dd {
+  margin: 0;
+}
+ul.participants {
+  columns: 2 260px;
+  padding-left: 1.2rem;
+}
+
+/* Tableau éliminatoire */
+.bracket {
+  display: flex;
+  gap: 1.6rem;
+  padding: 1rem;
+  min-width: max-content;
+}
+.ronde {
+  display: flex;
+  flex-direction: column;
+  width: 190px;
+}
+.ronde h3 {
+  margin: 0 0 0.6rem;
+  font-size: 0.85rem;
+  text-align: center;
+}
+.ronde h3 small {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 400;
+}
+.ronde-matchs {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  flex: 1;
+  gap: 0.8rem;
+}
+.emplacement {
+  position: relative;
+}
+.match-carte {
+  border: 1px solid var(--ligne);
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+  font-size: 0.88rem;
+}
+.match-carte.finale {
+  border-color: var(--ambre);
+  box-shadow: 0 0 0 2px var(--mousse);
+}
+.match-carte.cliquable {
+  cursor: pointer;
+}
+.match-carte.cliquable:hover {
+  border-color: var(--ambre-fonce);
+}
+.match-carte.lp {
+  opacity: 0.6;
+}
+.match-carte.fantome {
+  visibility: hidden;
+  height: 4.2em;
+}
+.case {
+  display: grid;
+  grid-template-columns: 1.6em 1fr 1.8em;
+  align-items: center;
+  height: 2.1em;
+  padding: 0 0.4rem;
+}
+.case + .case {
+  border-top: 1px solid var(--ligne);
+}
+.case .tete {
+  font-size: 0.72rem;
+  color: var(--encre-douce);
+}
+.case .nom {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.case .score {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+.case.gagnant {
+  background: var(--victoire-fond);
+  font-weight: 650;
+}
+.case.gagnant .score {
+  color: var(--victoire);
+}
+.case.perdant {
+  color: var(--encre-douce);
+}
+.carte-rem {
+  font-size: 0.72rem;
+  color: var(--encre-douce);
+  padding: 0.2rem 0.4rem;
+  border-top: 1px dashed var(--ligne);
+}
+
+/* ---------- Liste des tournois ---------- */
+.cartes-tournois {
+  display: grid;
+  gap: 0.5rem;
+}
+.carte-tournoi {
+  display: grid;
+  grid-template-columns: 3.4em 1fr auto;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.65rem 0.9rem;
+  background: var(--papier);
+  border-radius: var(--rayon);
+  box-shadow: var(--ombre);
+  color: var(--encre);
+}
+.carte-tournoi:hover {
+  text-decoration: none;
+  box-shadow: 0 0 0 2px var(--mousse), var(--ombre);
+}
+.carte-tournoi.recent {
+  background: linear-gradient(135deg, #fff9ea, #f6e7c3);
+}
+.ct-annee {
+  font-family: Georgia, serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ambre-fonce);
+}
+.ct-lieu {
+  font-weight: 650;
+}
+.ct-details {
+  font-size: 0.8rem;
+  color: var(--encre-douce);
+}
+.ct-champions {
+  display: grid;
+  justify-items: end;
+  font-size: 0.88rem;
+}
+.pastille {
+  margin-left: 0.5rem;
+  font-size: 0.7rem;
+  background: var(--ambre);
+  color: #fff;
+  border-radius: 99px;
+  padding: 0.05rem 0.45rem;
+  vertical-align: middle;
+}
+
+/* Fiche joueur */
+.chiffres {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.6rem;
+}
+.chiffres > div {
+  background: var(--papier);
+  border-radius: var(--rayon);
+  box-shadow: var(--ombre);
+  padding: 0.6rem 0.8rem;
+  font-size: 0.8rem;
+  color: var(--encre-douce);
+  display: grid;
+}
+.chiffres b {
+  font-size: 1.5rem;
+  color: var(--encre);
+  font-family: Georgia, serif;
+}
+
+/* ---------- Modales ---------- */
+dialog.modale {
+  border: 0;
+  border-radius: 14px;
+  padding: 1.2rem 1.3rem;
+  width: min(560px, 94vw);
+  max-height: 90vh;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 0.3);
+  background: var(--papier);
+  color: var(--encre);
+}
+dialog.modale::backdrop {
+  background: rgb(43 29 18 / 0.45);
+}
+dialog.modale h2 {
+  margin: 0 0 1rem;
+}
+.modale-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.2rem;
+}
+.modale-actions .danger {
+  margin-right: auto;
+}
+.saisie {
+  display: grid;
+  gap: 0.8rem;
+}
+.saisie-scores {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.6rem;
+}
+.saisie-joueur {
+  display: grid;
+  gap: 0.3rem;
+  justify-items: center;
+}
+.saisie-nom {
+  font-weight: 650;
+  font-size: 1.05rem;
+}
+input.score {
+  width: 3.2em;
+  font-size: 2rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.contre {
+  color: var(--encre-douce);
+  font-size: 0.85rem;
+}
+.badges {
+  display: flex;
+  gap: 0.4rem;
+  justify-content: center;
+  min-height: 1.6em;
+}
+.badge {
+  font-size: 0.78rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 99px;
+  background: var(--nonjoue);
+}
+.badge.blanchissage {
+  background: var(--victoire-fond);
+  color: var(--victoire);
+}
+.badge.supplementaire {
+  background: var(--mousse);
+  color: var(--ambre-fonce);
+}
+.erreur {
+  color: var(--defaite);
+  font-size: 0.88rem;
+  min-height: 1.2em;
+  text-align: center;
+}
+.liste-joueurs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.25rem 0.6rem;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 0.4rem;
+  border: 1px solid var(--ligne);
+  border-radius: 8px;
+}
+.liste-joueurs label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.9rem;
+}
+
+.avis {
+  position: fixed;
+  bottom: 1.2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--encre);
+  color: #fff;
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  box-shadow: var(--ombre);
+  z-index: 100;
+  transition: opacity 0.5s;
+}
+.avis-erreur {
+  background: var(--defaite);
+}
+.avis.sortie {
+  opacity: 0;
+}
+
+@media (max-width: 640px) {
+  :root {
+    font-size: 14px;
+  }
+  main {
+    padding: 0.75rem 0.6rem 3rem;
+  }
+  header {
+    padding: 0.4rem 0.6rem;
+    gap: 0.4rem;
+  }
+  nav.principale {
+    order: 3;
+    flex-basis: 100%;
+  }
+  .etat {
+    margin-left: auto;
+  }
+  .palmares {
+    gap: 0.35rem;
+  }
+  .palme {
+    padding: 0.45rem 0.55rem;
+    font-size: 0.92rem;
+  }
+  .carte-tournoi {
+    grid-template-columns: 3em 1fr;
+  }
+  .ct-champions {
+    grid-column: 2;
+    justify-items: start;
+    display: flex;
+    gap: 0.8rem;
+  }
+}
+
+@media print {
+  header,
+  nav.onglets,
+  .boutons,
+  .segments {
+    display: none;
+  }
+  .defile {
+    box-shadow: none;
+    overflow: visible;
+  }
+}

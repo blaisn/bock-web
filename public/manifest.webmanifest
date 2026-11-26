@@ -1,0 +1,10 @@
+{
+  "name": "Bock — Tournoi de lancer de bouchons",
+  "short_name": "Bock",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f1e6",
+  "theme_color": "#2b1d12",
+  "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
