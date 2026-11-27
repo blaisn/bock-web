@@ -4,6 +4,7 @@ import { avis, h, modale, type Child } from '../dom';
 import type { Tableau, MatchTableau, Case } from '../engine/bracket';
 import type { LigneClassement } from '../engine/classement';
 import type { Fiche } from '../engine/fiche';
+import { matchsDuTournoi } from '../engine/integrite';
 import { participantsTournoi } from '../engine/tournoi';
 import { dateCourte, heure } from '../format';
 import type { Match, Tournoi, TypeMatch } from '../model';
@@ -201,7 +202,6 @@ function vueTableau(t: Tournoi, tab: Tableau | null, type: 'Séries' | 'Consolat
   }
   const cl = classement(t.id);
   const saisonFinie = cl.every((l) => l.matchsRestants === 0);
-  const matchSuivant = (m: MatchTableau) => (m.ronde < tab.nbRondes ? tab.rondes[m.ronde][Math.ceil(m.idMatch / 2) - 1] : undefined);
 
   const caseJoueur = (c: Case, m: MatchTableau, haut: boolean) => {
     const score = m.match ? (c.etat === 'joueur' && c.joueur === m.match.gagnant ? m.match.scoreG : m.match.scoreP) : '';
@@ -217,8 +217,6 @@ function vueTableau(t: Tournoi, tab: Tableau | null, type: 'Séries' | 'Consolat
 
   const carte = (m: MatchTableau) => {
     const pret = m.haut.etat === 'joueur' && m.bas.etat === 'joueur';
-    const suivant = matchSuivant(m);
-    const verrou = suivant?.match && m.match ? 'Le match suivant est déjà joué : effacez-le d’abord pour modifier celui-ci.' : undefined;
     const cliquable = store.saisie && pret && !m.laissezPasser;
     const attrs: Record<string, unknown> = {
       class: ['match-carte', m.laissezPasser ? 'lp' : '', cliquable ? 'cliquable' : '', m.type === 'Finale' ? 'finale' : ''].join(' '),
@@ -229,7 +227,7 @@ function vueTableau(t: Tournoi, tab: Tableau | null, type: 'Séries' | 'Consolat
       const j2 = m.bas.joueur;
       attrs.onclick = () => {
         if (!saisonFinie && !m.match && !confirm('La saison n’est pas terminée : le tableau peut encore changer. Saisir quand même ?')) return;
-        ouvrirSaisie({ tournoi: t.id, type: m.type, joueur1: j1, joueur2: j2, ronde: m.ronde, idMatch: m.idMatch, verrou });
+        ouvrirSaisie({ tournoi: t.id, type: m.type, joueur1: j1, joueur2: j2, ronde: m.ronde, idMatch: m.idMatch });
       };
     }
     if (m.laissezPasser && m.haut.etat === 'vide' && m.bas.etat === 'vide') return h('div', { class: 'match-carte fantome' });
@@ -270,7 +268,7 @@ function vueInfos(t: Tournoi): Child {
     'div',
     { class: 'infos' },
     store.saisie
-      ? h('div', { class: 'boutons' }, h('button', { type: 'button', onclick: () => editerParametres(t) }, 'Modifier les réglages'), h('button', { type: 'button', onclick: () => editerParticipants(t) }, 'Participants, remarques et rangs forcés'), h('button', { type: 'button', class: 'danger', onclick: () => supprimerTournoi(t) }, 'Supprimer le tournoi'))
+      ? h('div', { class: 'boutons' }, h('button', { type: 'button', onclick: () => editerParametres(t) }, 'Modifier les réglages'), h('button', { type: 'button', onclick: () => editerParticipants(t) }, 'Participants, remarques et rangs forcés'), h('button', { type: 'button', class: 'danger', onclick: () => supprimerTournoi(t), title: 'Possible seulement si aucun match n’est saisi' }, 'Supprimer le tournoi'))
       : null,
     h(
       'dl',
@@ -289,22 +287,29 @@ function vueInfos(t: Tournoi): Child {
 }
 
 function supprimerTournoi(t: Tournoi) {
-  const nb = store.data.matchs.filter((m) => m.tournoi === t.id).length;
-  modale('Supprimer le tournoi', h('p', null, `Supprimer « ${t.lieu} » (${dateCourte(t.date)}) avec ses ${nb} matchs ? Cette action est irréversible (sauf importation d’une sauvegarde).`), [
+  const nb = matchsDuTournoi(store.data, t.id).length;
+  if (nb > 0) {
+    modale('Suppression impossible', h('p', null, `Ce tournoi a ${nb} match${nb > 1 ? 's' : ''} saisi${nb > 1 ? 's' : ''}. Supprimez d’abord tous ses matchs, puis revenez supprimer le tournoi.`), [
+      { texte: 'Fermer', action: () => {} },
+      { texte: `Voir les ${nb} matchs`, classe: 'principal', action: () => void (location.hash = `#/matchs/t/${t.id}`) },
+    ]);
+    return;
+  }
+  modale('Supprimer le tournoi', h('p', null, `Supprimer « ${t.lieu} » (${dateCourte(t.date)}) et ses inscriptions ? Aucun match n’y est saisi.`), [
     { texte: 'Annuler', action: () => {} },
     {
       texte: 'Supprimer',
       classe: 'danger',
       action: () => {
-        store.modifier((d) => {
+        const ok = store.modifier((d) => {
+          if (matchsDuTournoi(d, t.id).length) throw new Error('Ce tournoi a des matchs.');
           d.tournois = d.tournois.filter((x) => x.id !== t.id);
           d.participations = d.participations.filter((x) => x.tournoi !== t.id);
-          d.matchs = d.matchs.filter((x) => x.tournoi !== t.id);
         });
+        if (!ok) return false;
         avis('Tournoi supprimé');
         location.hash = '#/';
       },
     },
   ]);
 }
-

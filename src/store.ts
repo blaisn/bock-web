@@ -4,12 +4,29 @@
 //  - Téléphones (lecture seule) : relisent bock.json périodiquement.
 
 import { AwsClient } from 'aws4fetch';
+import { h, modale } from './dom';
+import { verifierIntegrite } from './engine/integrite';
 import type { BockData } from './model';
 
 const CLE_DONNEES = 'bock.donnees';
 const CLE_CONFIG = 'bock.config';
 const URL_DONNEES = 'bock.json';
 const INTERVALLE_LECTURE_MS = 30_000;
+
+/** Affiche la liste des violations d'intégrité. */
+export function signalerErreurs(titre: string, erreurs: string[]): void {
+  const max = 15;
+  modale(
+    titre,
+    h(
+      'div',
+      null,
+      h('ul', { class: 'erreurs' }, erreurs.slice(0, max).map((x) => h('li', null, x))),
+      erreurs.length > max ? h('p', { class: 'discret' }, `… et ${erreurs.length - max} autre(s).`) : null,
+    ),
+    [{ texte: 'OK', classe: 'principal', action: () => {} }],
+  );
+}
 
 export interface ConfigS3 {
   bucket: string;
@@ -59,6 +76,8 @@ class Store {
   etatPublication: EtatPublication = 'à jour';
   derniereLecture?: string;
   erreurLecture?: string;
+  /** Violations détectées dans les données locales au démarrage (publication bloquée) */
+  erreursLocales: string[] = [];
   private ecouteurs = new Set<Ecouteur>();
   private minuterie?: number;
 
@@ -79,8 +98,12 @@ class Store {
   async demarrer(): Promise<void> {
     if (this.saisie) {
       const local = lireJSON<BockData>(CLE_DONNEES);
-      if (local) this.data = local;
-      else await this.chargerServeur();
+      if (local) {
+        this.data = local;
+        this.erreursLocales = verifierIntegrite(local);
+        if (this.erreursLocales.length)
+          setTimeout(() => signalerErreurs('Données locales incohérentes — publication bloquée', this.erreursLocales), 300);
+      } else await this.chargerServeur();
       this.majEtat();
     } else {
       await this.chargerServeur();
@@ -97,10 +120,17 @@ class Store {
       const r = await fetch(`${URL_DONNEES}?t=${Date.now()}`, { cache: 'no-store' });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const d = (await r.json()) as BockData;
+      const erreurs = verifierIntegrite(d);
+      if (erreurs.length) {
+        console.warn('bock.json invalide', erreurs);
+        // Sans données du tout, mieux vaut afficher quelque chose ; sinon on garde les précédentes
+        if (this.data.tournois.length) throw new Error(`données publiées invalides (${erreurs[0]})`);
+      }
       this.derniereLecture = new Date().toISOString();
       this.erreurLecture = undefined;
       if (d.modifie !== this.data.modifie || !this.data.tournois.length) {
         this.data = d;
+        this.erreursLocales = erreurs;
         if (this.saisie) ecrireJSON(CLE_DONNEES, d);
         this.notifier();
       } else if (!silencieux) {
@@ -114,23 +144,48 @@ class Store {
     }
   }
 
-  /** Modifie les données (mode saisie seulement), sauvegarde et publie au besoin. */
-  modifier(f: (d: BockData) => void): void {
+  /**
+   * Modifie les données comme une transaction (mode saisie seulement) :
+   * si une contrainte d'intégrité est violée, rien n'est changé.
+   * Retourne true si la modification est enregistrée.
+   */
+  modifier(f: (d: BockData) => void): boolean {
     if (!this.saisie) throw new Error('Lecture seule');
-    f(this.data);
+    const copie = structuredClone(this.data);
+    try {
+      f(copie);
+    } catch (e) {
+      signalerErreurs('Modification refusée', [String(e instanceof Error ? e.message : e)]);
+      return false;
+    }
+    // Les erreurs déjà présentes au démarrage ne bloquent pas les nouvelles modifications
+    const avant = new Set(this.erreursLocales);
+    const nouvelles = verifierIntegrite(copie).filter((x) => !avant.has(x));
+    if (nouvelles.length) {
+      signalerErreurs('Modification refusée', nouvelles);
+      return false;
+    }
+    this.data = copie;
+    this.erreursLocales = this.erreursLocales.length ? verifierIntegrite(copie) : [];
     this.data.modifie = new Date().toISOString();
     ecrireJSON(CLE_DONNEES, this.data);
     this.majEtat();
     this.notifier();
     if (this.config.autoPublier) void this.publier();
+    return true;
   }
 
-  remplacer(d: BockData): void {
+  /** Remplace toutes les données (restauration). Retourne les violations, vide si accepté. */
+  remplacer(d: BockData): string[] {
+    const erreurs = verifierIntegrite(d);
+    if (erreurs.length) return erreurs;
+    this.erreursLocales = [];
     this.data = d;
     this.data.modifie = new Date().toISOString();
     ecrireJSON(CLE_DONNEES, this.data);
     this.majEtat();
     this.notifier();
+    return [];
   }
 
   sauverConfig(c: Partial<Config>): void {
@@ -179,6 +234,13 @@ class Store {
     if (!navigator.onLine) {
       this.etatPublication = 'hors ligne';
       this.notifier();
+      return false;
+    }
+    const erreurs = verifierIntegrite(this.data);
+    if (erreurs.length) {
+      this.etatPublication = 'erreur';
+      this.notifier();
+      signalerErreurs('Publication bloquée : données incohérentes', erreurs);
       return false;
     }
     const version = this.data.modifie;

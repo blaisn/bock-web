@@ -46,6 +46,32 @@ npm run build      # dist/
 - **Consolation** : même tableau pour les joueurs classés après les séries. S'il y a moins de deux joueurs, il n'y a pas de consolation.
 - **Pointages** : `max` contre 0 à `max-1`, ou `max+1` contre `max` (supplémentaire). Un 0-0 efface le match.
 
+## Intégrité des données
+
+Les contraintes de la base Access (clés primaires, index uniques, relations) sont reprises dans `src/engine/integrite.ts` :
+
+| Access | Version web |
+| --- | --- |
+| Clés primaires joueurs et tournois | Identifiants uniques |
+| `idx_TournoiJoueur` | Une seule inscription par joueur et par tournoi |
+| Participations → Joueurs, Tournois | Le joueur et le tournoi doivent exister |
+| Matchs → Participations | Gagnant et perdant inscrits au tournoi |
+| `idx_Unicité` | Un seul match par paire de joueurs (ronde) |
+| `idx_Éliminatoire` | Un seul match par position du tableau |
+| `ValideScore` (VBA) | Pointage valide, blanchissage et supplémentaire cohérents |
+
+La vérification s'applique à quatre endroits :
+- **chaque modification** : c'est une transaction, et une modification qui viole une contrainte est annulée avec la liste des problèmes ;
+- **le chargement** de `bock.json` ;
+- **la restauration** d'une sauvegarde, qui est refusée si le fichier est incohérent ;
+- **chaque publication**, qui est bloquée si les données sont incohérentes.
+
+Règles de suppression :
+- **Joueur** : seulement s'il n'a joué aucun match. Ses inscriptions sans match sont retirées avec lui.
+- **Tournoi** : seulement s'il n'a aucun match. Il faut d'abord supprimer ses matchs, depuis la fenêtre de saisie ou l'onglet Matchs.
+- **Participant** : il ne peut pas être décoché s'il a joué au moins un match dans le tournoi.
+- **Match des séries ou de la consolation** : il ne peut pas être supprimé ni modifié si le match suivant du tableau est déjà joué.
+
 Le calcul du CAS et les données qui le servaient (poids, volume, alcool) n'ont pas été repris.
 
 ## Mise en ligne sur S3

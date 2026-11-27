@@ -3,6 +3,7 @@ import { nom, nomCourt } from '../calc';
 import { avis, h, modale } from '../dom';
 import { aujourdhui } from '../format';
 import { TYPES_MATCH, type Joueur, type Tournoi, type TypeMatch } from '../model';
+import { matchsDuJoueur, matchsDuTournoi } from '../engine/integrite';
 import { store } from '../store';
 import { champ } from './commun';
 
@@ -62,7 +63,7 @@ export function editerParametres(t: Tournoi) {
         if (typeof v === 'string') return erreur(v);
         const nbPart = store.data.participations.filter((p) => p.tournoi === t.id).length;
         if (v.nbJoueursSeries > nbPart) return erreur('Plus de joueurs en séries que de participants.');
-        store.modifier((d) => Object.assign(d.tournois.find((x) => x.id === t.id)!, v));
+        return store.modifier((d) => Object.assign(d.tournois.find((x) => x.id === t.id)!, v));
       },
     },
   ]);
@@ -85,26 +86,35 @@ export function nouveauTournoi() {
         if (joueurs.length < 2) return erreur('Il faut au moins deux participants.');
         if (v.nbJoueursSeries > joueurs.length) v.nbJoueursSeries = joueurs.length;
         const id = Math.max(0, ...store.data.tournois.map((x) => x.id)) + 1;
-        store.modifier((d) => {
+        const ok = store.modifier((d) => {
           d.tournois.push({ id, ...v });
           for (const j of joueurs) d.participations.push({ tournoi: id, joueur: j });
         });
+        if (!ok) return false;
         location.hash = `#/t/${id}/saison`;
       },
     },
   ]);
 }
 
-function listeJoueurs(coches: Set<number>, verrouilles = new Set<number>()) {
+/** @param verrouilles joueurs qu'on ne peut pas décocher → nombre de matchs joués */
+function listeJoueurs(coches: Set<number>, verrouilles = new Map<number, number>()) {
   const boites = new Map<number, HTMLInputElement>();
   const tri = [...store.data.joueurs].sort((a, b) => a.nomCourt.localeCompare(b.nomCourt, 'fr'));
   const el = h(
     'div',
     { class: 'liste-joueurs' },
     tri.map((j) => {
-      const b = h('input', { type: 'checkbox', checked: coches.has(j.id), disabled: verrouilles.has(j.id) }) as HTMLInputElement;
+      const nb = verrouilles.get(j.id);
+      const b = h('input', { type: 'checkbox', checked: coches.has(j.id) || Boolean(nb), disabled: Boolean(nb) }) as HTMLInputElement;
       boites.set(j.id, b);
-      return h('label', { title: verrouilles.has(j.id) ? 'A déjà joué des matchs dans ce tournoi' : j.nom }, b, ` ${j.nomCourt}`, h('small', null, ` ${j.nom}`));
+      return h(
+        'label',
+        { class: nb ? 'verrouille' : '', title: nb ? `${j.nom} a joué ${nb} match${nb > 1 ? 's' : ''} dans ce tournoi : on ne peut pas le retirer` : j.nom },
+        b,
+        ` ${j.nomCourt}`,
+        nb ? h('small', null, ` 🔒 ${nb}`) : h('small', null, ` ${j.nom}`),
+      );
     }),
   );
   return { el, lire: () => [...boites.entries()].filter(([, b]) => b.checked).map(([id]) => id) };
@@ -112,7 +122,8 @@ function listeJoueurs(coches: Set<number>, verrouilles = new Set<number>()) {
 
 export function editerParticipants(t: Tournoi) {
   const parts = store.data.participations.filter((p) => p.tournoi === t.id);
-  const avecMatchs = new Set(store.data.matchs.filter((m) => m.tournoi === t.id).flatMap((m) => [m.gagnant, m.perdant]));
+  const avecMatchs = new Map<number, number>();
+  for (const m of matchsDuTournoi(store.data, t.id)) for (const j of [m.gagnant, m.perdant]) avecMatchs.set(j, (avecMatchs.get(j) ?? 0) + 1);
   const choix = listeJoueurs(new Set(parts.map((p) => p.joueur)), avecMatchs);
   const details = h(
     'table',
@@ -134,7 +145,7 @@ export function editerParticipants(t: Tournoi) {
         ),
     ),
   );
-  modale(`Participants — ${t.lieu}`, h('div', null, h('p', { class: 'discret' }, 'Un joueur qui a déjà des matchs dans ce tournoi ne peut pas être retiré.'), choix.el, h('h3', null, 'Remarques et rangs forcés'), h('div', { class: 'defile' }, details)), [
+  modale(`Participants — ${t.lieu}`, h('div', null, h('p', { class: 'discret' }, '🔒 Un joueur qui a déjà au moins un match dans ce tournoi ne peut pas être retiré (supprimez d’abord ses matchs).'), choix.el, h('h3', null, 'Remarques et rangs forcés'), h('div', { class: 'defile' }, details)), [
     { texte: 'Annuler', action: () => {} },
     {
       texte: 'Enregistrer',
@@ -146,7 +157,10 @@ export function editerParticipants(t: Tournoi) {
         details.querySelectorAll<HTMLTableRowElement>('tbody tr').forEach((tr) => {
           saisies.set(Number(tr.dataset.joueur), { rem: tr.querySelector<HTMLInputElement>('.rem')!.value.trim(), rf: Number(tr.querySelector<HTMLInputElement>('.rf')!.value) || 0 });
         });
-        store.modifier((d) => {
+        return store.modifier((d) => {
+          // Contrainte : on ne retire pas un participant qui a joué
+          for (const j of new Set(matchsDuTournoi(d, t.id).flatMap((m) => [m.gagnant, m.perdant])))
+            if (!joueurs.has(j)) throw new Error(`${nomCourt(j)} a déjà joué dans ce tournoi : on ne peut pas le retirer.`);
           d.participations = d.participations.filter((p) => p.tournoi !== t.id || joueurs.has(p.joueur));
           for (const j of joueurs) if (!d.participations.some((p) => p.tournoi === t.id && p.joueur === j)) d.participations.push({ tournoi: t.id, joueur: j });
           for (const p of d.participations) {
@@ -172,7 +186,27 @@ export function editerJoueur(j?: Joueur) {
   const sexe = h('select', null, h('option', { value: 'h' }, 'Homme'), h('option', { value: 'f' }, 'Femme'));
   sexe.value = j && !j.homme ? 'f' : 'h';
   const rem = h('textarea', { rows: 2 }, j?.remarque ?? '');
-  modale(j ? `Joueur — ${j.nom}` : 'Nouveau joueur', h('div', { class: 'formulaire' }, champ('Nom', nomI), champ('Surnom', court), champ('Sexe', sexe), champ('Remarque', rem)), [
+  const nbMatchs = j ? matchsDuJoueur(store.data, j.id).length : 0;
+  const actions: Parameters<typeof modale>[2] = [];
+  if (j && !nbMatchs)
+    actions.push({
+      texte: 'Supprimer le joueur',
+      classe: 'danger',
+      action: () => {
+        if (nbMatchs) return erreur(`${j.nomCourt} a joué ${nbMatchs} match${nbMatchs > 1 ? 's' : ''} : on ne peut pas le supprimer.`);
+        const nbTournois = store.data.participations.filter((p) => p.joueur === j.id).length;
+        if (!confirm(`Supprimer ${j.nom}${nbTournois ? ` et ses ${nbTournois} inscription(s) sans match` : ''} ?`)) return false;
+        const ok = store.modifier((d) => {
+          if (matchsDuJoueur(d, j.id).length) throw new Error(`${j.nomCourt} a des matchs.`);
+          d.joueurs = d.joueurs.filter((x) => x.id !== j.id);
+          d.participations = d.participations.filter((p) => p.joueur !== j.id);
+        });
+        if (!ok) return false;
+        avis('Joueur supprimé');
+        if (location.hash.startsWith('#/j/')) location.hash = '#/joueurs';
+      },
+    });
+  actions.push(
     { texte: 'Annuler', action: () => {} },
     {
       texte: 'Enregistrer',
@@ -180,11 +214,24 @@ export function editerJoueur(j?: Joueur) {
       action: () => {
         if (!nomI.value.trim()) return erreur('Le nom est obligatoire.');
         const v = { nom: nomI.value.trim(), nomCourt: court.value.trim() || nomI.value.trim().split(' ')[0], homme: sexe.value === 'h', remarque: rem.value.trim() || null };
-        store.modifier((d) => {
+        return store.modifier((d) => {
           if (j) Object.assign(d.joueurs.find((x) => x.id === j.id)!, v);
           else d.joueurs.push({ id: Math.max(0, ...d.joueurs.map((x) => x.id)) + 1, ...v });
         });
       },
     },
-  ]);
+  );
+  modale(
+    j ? `Joueur — ${j.nom}` : 'Nouveau joueur',
+    h(
+      'div',
+      { class: 'formulaire' },
+      champ('Nom', nomI),
+      champ('Surnom', court),
+      champ('Sexe', sexe),
+      champ('Remarque', rem),
+      j && nbMatchs ? h('p', { class: 'discret' }, `🔒 ${nbMatchs} match${nbMatchs > 1 ? 's' : ''} joué${nbMatchs > 1 ? 's' : ''} : ce joueur ne peut pas être supprimé.`) : null,
+    ),
+    actions,
+  );
 }

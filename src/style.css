@@ -869,3 +869,23 @@ input.score {
     overflow: visible;
   }
 }
+
+/* Intégrité */
+ul.erreurs {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--defaite);
+  font-size: 0.9rem;
+  display: grid;
+  gap: 0.3rem;
+}
+.liste-joueurs label.verrouille {
+  color: var(--encre-douce);
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+button.danger:not(:disabled):hover {
+  background: var(--defaite-fond);
+}
