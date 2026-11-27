@@ -953,3 +953,108 @@ th img.icone-toilette {
   align-items: center;
   gap: 0.25em;
 }
+
+/* Graphiques (pointes de tarte) */
+.graphiques {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: 0.8rem;
+  margin-top: 1.4rem;
+  max-width: 900px;
+}
+.carte-graphique {
+  margin: 0;
+  background: var(--papier);
+  border-radius: var(--rayon);
+  box-shadow: var(--ombre);
+  padding: 0.8rem 1rem 1rem;
+}
+.carte-graphique figcaption {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+.carte-graphique figcaption b {
+  font-family: Georgia, serif;
+  font-size: 1.1rem;
+}
+.carte-graphique figcaption small {
+  font-size: 0.8rem;
+}
+.graphique-corps {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  align-items: center;
+  gap: 1rem;
+}
+.graphique-corps svg {
+  width: 140px;
+  height: 140px;
+  overflow: visible;
+}
+/* 2 px d'écart entre les pointes, couleur du fond */
+.pointe {
+  stroke: var(--papier);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  transition: transform 0.15s, opacity 0.15s;
+  cursor: default;
+}
+.carte-graphique.survol .pointe:not(.active) {
+  opacity: 0.45;
+}
+.pointe.active {
+  transform: translate(var(--dx), var(--dy));
+}
+.legende-graphique {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.15rem;
+  font-size: 0.84rem;
+}
+.legende-graphique li {
+  display: grid;
+  grid-template-columns: 0.8rem 1fr auto 3.8rem;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.12rem 0.3rem;
+  border-radius: 5px;
+}
+.legende-graphique li.active {
+  background: var(--fond);
+}
+.legende-graphique li.nul {
+  color: var(--encre-douce);
+}
+.pastille-couleur {
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 3px;
+}
+.legende-valeur {
+  font-weight: 650;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.legende-pct {
+  text-align: right;
+  color: var(--encre-douce);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 420px) {
+  .graphique-corps {
+    grid-template-columns: 110px 1fr;
+  }
+  .graphique-corps svg {
+    width: 110px;
+    height: 110px;
+  }
+}
+.note-graphique {
+  margin: 0.6rem 0 0;
+  font-size: 0.75rem;
+  color: var(--encre-douce);
+}
