@@ -64,7 +64,7 @@ function majEtat() {
     const cls = e === 'à jour' ? 'ok' : e === 'publication…' ? 'encours' : e === 'non configuré' ? 'neutre' : 'alerte';
     vider(
       etat,
-      h('span', { class: `pastille-etat ${cls}`, title: 'Poste de saisie' }, '✎ Saisie · ', e === 'à jour' ? 'publié' : e),
+      h('a', { href: '#/reglages', class: `pastille-etat ${cls}`, title: store.erreurPublication ?? 'Poste de saisie' }, '✎ Saisie · ', e === 'à jour' ? 'publié' : e),
       e !== 'à jour' && e !== 'publication…' && e !== 'non configuré' ? h('button', { type: 'button', class: 'mini', onclick: () => void store.publier() }, 'Publier') : null,
     );
   } else {

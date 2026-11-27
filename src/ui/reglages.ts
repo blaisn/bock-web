@@ -74,12 +74,17 @@ export function pageReglages(): Child {
             const v = { bucket: bucket.value.trim(), region: region.value.trim(), cle: cle.value.trim() || 'bock.json', accessKeyId: akid.value.trim(), secretAccessKey: secret.value.trim() };
             store.sauverConfig({ s3: v.bucket && v.accessKeyId && v.secretAccessKey ? v : undefined, autoPublier: auto.checked });
             if (!store.config.s3) return avis('Réglages enregistrés (publication désactivée).');
-            avis((await store.publier()) ? 'Publication réussie ✔' : 'Publication échouée — vérifiez les réglages', store.etatPublication === 'à jour' ? 'info' : 'erreur');
+            if (await store.publier()) avis('Publication réussie ✔');
+            else avis('Publication échouée — voir le message sous le bouton', 'erreur');
           },
         },
         'Enregistrer et publier',
       ),
     ),
+    store.erreurPublication ? h('p', { class: 'avertissement' }, h('b', null, 'Échec de la publication : '), store.erreurPublication) : null,
+    !store.erreurPublication && (!window.isSecureContext || !globalThis.crypto?.subtle)
+      ? h('p', { class: 'avertissement' }, 'Cette page est ouverte en http : la publication et le mode hors ligne exigent l’adresse https du bucket (…s3.REGION.amazonaws.com/index.html).')
+      : null,
     store.config.dernierePublication ? h('p', { class: 'discret' }, `Dernière publication : ${ilYa(store.config.dernierePublication)} (${dateCourte(store.config.dernierePublication)})`) : null,
     h('h2', null, 'Sauvegardes'),
     h(
