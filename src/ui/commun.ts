@@ -5,37 +5,59 @@ import { signe, trois } from '../format';
 
 export const lienJoueur = (id: number, court = true) => h('a', { href: `#/j/${id}`, class: 'joueur', title: nom(id) }, court ? nomCourt(id) : nom(id));
 
+/** Icône de la consolation (★ = saison, 🏆 = séries) */
+export const iconeConsolation = (titre = 'Consolation') => h('img', { src: 'toilette.png', alt: '🚽', title: titre, class: 'icone-toilette' });
+
 export const lienTournoi = (id: number, texte: Child) => h('a', { href: `#/t/${id}` }, texte);
 
-/** En-têtes standards d'une fiche */
-export const ENTETES_FICHE: [string, string][] = [
-  ['MG', 'Matchs gagnés'],
-  ['MP', 'Matchs perdus'],
-  ['Cote', 'Proportion de matchs gagnés'],
-  ['PP', 'Points pour'],
-  ['PC', 'Points contre'],
-  ['±', 'Différentiel'],
-  ['%', 'Proportion des points marqués'],
-  ['G0', 'Gagnés par blanchissage'],
-  ['P0', 'Perdus par blanchissage'],
-  ['GS', 'Gagnés en supplémentaire'],
-  ['PS', 'Perdus en supplémentaire'],
+/**
+ * Colonnes d'une fiche, dans l'ordre de référence (celui du classement à vie) :
+ * Cote, %, MJ, MG, MP, PP, PC, ±, G0, P0, GS, PS.
+ * Toutes les vues (classement, fiche du joueur, face-à-face, à vie) utilisent cette liste.
+ */
+export interface ColonneFiche {
+  titre: string;
+  aide: string;
+  valeur: (f: Fiche) => number;
+  rendu: (f: Fiche) => Child;
+  classe?: string;
+}
+
+const matchsJoues = (f: Fiche) => f.MG + f.MP;
+
+export const COLONNES_FICHE: ColonneFiche[] = [
+  { titre: 'Cote', aide: 'Proportion de matchs gagnés', valeur: cote, rendu: (f) => (matchsJoues(f) ? trois(cote(f)) : ''), classe: 'fort' },
+  { titre: '%', aide: 'Proportion des points marqués', valeur: pourcentPoints, rendu: (f) => (f.PP + f.PC ? trois(pourcentPoints(f)) : '') },
+  { titre: 'MJ', aide: 'Matchs joués', valeur: matchsJoues, rendu: matchsJoues },
+  { titre: 'MG', aide: 'Matchs gagnés', valeur: (f) => f.MG, rendu: (f) => f.MG },
+  { titre: 'MP', aide: 'Matchs perdus', valeur: (f) => f.MP, rendu: (f) => f.MP },
+  { titre: 'PP', aide: 'Points pour', valeur: (f) => f.PP, rendu: (f) => f.PP },
+  { titre: 'PC', aide: 'Points contre', valeur: (f) => f.PC, rendu: (f) => f.PC },
+  { titre: '±', aide: 'Différentiel (PP − PC)', valeur: (f) => f.PP - f.PC, rendu: (f) => signe(f.PP - f.PC) },
+  { titre: 'G0', aide: 'Gagnés par blanchissage', valeur: (f) => f.G0, rendu: (f) => f.G0 || '', classe: 'discret' },
+  { titre: 'P0', aide: 'Perdus par blanchissage', valeur: (f) => f.P0, rendu: (f) => f.P0 || '', classe: 'discret' },
+  { titre: 'GS', aide: 'Gagnés en supplémentaire', valeur: (f) => f.GS, rendu: (f) => f.GS || '', classe: 'discret' },
+  { titre: 'PS', aide: 'Perdus en supplémentaire', valeur: (f) => f.PS, rendu: (f) => f.PS || '', classe: 'discret' },
 ];
 
-export const thFiche = () => ENTETES_FICHE.map(([t, titre]) => h('th', { class: 'num', title: titre }, t));
+export const thFiche = () => COLONNES_FICHE.map((c) => h('th', { class: 'num', title: c.aide }, c.titre));
 
-export const tdFiche = (f: Fiche) => [
-  h('td', { class: 'num fort' }, f.MG),
-  h('td', { class: 'num' }, f.MP),
-  h('td', { class: 'num' }, f.MG + f.MP ? trois(cote(f)) : ''),
-  h('td', { class: 'num' }, f.PP),
-  h('td', { class: 'num' }, f.PC),
-  h('td', { class: 'num discret' }, signe(f.PP - f.PC)),
-  h('td', { class: 'num' }, f.PP + f.PC ? trois(pourcentPoints(f)) : ''),
-  h('td', { class: 'num discret' }, f.G0 || ''),
-  h('td', { class: 'num discret' }, f.P0 || ''),
-  h('td', { class: 'num discret' }, f.GS || ''),
-  h('td', { class: 'num discret' }, f.PS || ''),
+export const tdFiche = (f: Fiche) => COLONNES_FICHE.map((c) => h('td', { class: `num ${c.classe ?? ''}` }, c.rendu(f)));
+
+/** Colonnes de fiche pour tableTriable */
+export const colonnesFiche = <T>(fiche: (x: T) => Fiche): Colonne<T>[] =>
+  COLONNES_FICHE.map((c) => ({ titre: c.titre, aide: c.aide, num: true, classe: c.classe, cle: (x: T) => c.valeur(fiche(x)), rendu: (x: T) => c.rendu(fiche(x)) }));
+
+/** Titres dans l'ordre du déroulement du tournoi : saison, séries, consolation */
+export interface Titres {
+  titresSaison: number;
+  titresSeries: number;
+  titresConsolation: number;
+}
+export const colonnesTitres = <T>(t: (x: T) => Titres | undefined): Colonne<T>[] => [
+  { titre: '★', aide: 'Championnats de saison', num: true, cle: (x) => t(x)?.titresSaison ?? 0, rendu: (x) => t(x)?.titresSaison || '' },
+  { titre: '🏆', aide: 'Championnats des séries', num: true, cle: (x) => t(x)?.titresSeries ?? 0, rendu: (x) => t(x)?.titresSeries || '' },
+  { titre: iconeConsolation(), aide: 'Championnats de consolation', num: true, cle: (x) => t(x)?.titresConsolation ?? 0, rendu: (x) => t(x)?.titresConsolation || '' },
 ];
 
 export const titre = (texte: Child, ...apres: Child[]) => h('div', { class: 'titre-page' }, h('h1', null, texte), apres);
@@ -45,8 +67,17 @@ export function champ(libelle: string, controle: HTMLElement, aide?: string) {
 }
 
 /** Tableau triable par clic sur les en-têtes */
+export interface Colonne<T> {
+  titre: Child;
+  aide?: string;
+  num?: boolean;
+  cle?: (x: T) => number | string;
+  rendu: (x: T, i: number) => Child;
+  classe?: string;
+}
+
 export function tableTriable<T>(
-  colonnes: { titre: string; aide?: string; num?: boolean; cle?: (x: T) => number | string; rendu: (x: T, i: number) => Child; classe?: string }[],
+  colonnes: Colonne<T>[],
   lignes: T[],
   triInitial?: { col: number; desc: boolean },
 ): HTMLElement {

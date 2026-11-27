@@ -9,7 +9,7 @@ import { participantsTournoi } from '../engine/tournoi';
 import { dateCourte, heure } from '../format';
 import type { Match, Tournoi, TypeMatch } from '../model';
 import { store } from '../store';
-import { lienJoueur, tdFiche, thFiche, titre } from './commun';
+import { iconeConsolation, lienJoueur, tdFiche, thFiche, titre } from './commun';
 import { ouvrirSaisie } from './saisie';
 import { editerParametres, editerParticipants } from './edition';
 
@@ -59,17 +59,17 @@ export function pageTournoi(id: number, onglet?: string): Child {
     h(
       'div',
       { class: 'palmares' },
-      palme('Séries', ch.series),
-      palme('Saison', ch.saison),
-      palme('Consolation', ch.consolation),
+      palme('Saison', ch.saison, '★'),
+      palme('Séries', ch.series, '🏆', true),
+      palme('Consolation', ch.consolation, iconeConsolation()),
     ),
     h('nav', { class: 'onglets' }, onglets.map(([o, l]) => h('a', { href: `#/t/${id}/${o}`, class: o === actif ? 'actif' : '' }, l))),
     h('section', { class: 'onglet' }, contenu),
   );
 }
 
-function palme(libelle: string, j?: number) {
-  return h('div', { class: `palme ${j ? '' : 'vide'}` }, h('span', { class: 'palme-titre' }, `Champion ${libelle.toLowerCase()}`), j ? lienJoueur(j) : h('span', null, '—'));
+function palme(libelle: string, j: number | undefined, icone: Child, vedette = false) {
+  return h('div', { class: `palme ${j ? '' : 'vide'} ${vedette ? 'vedette' : ''}` }, h('span', { class: 'palme-titre' }, icone, ` Champion ${libelle.toLowerCase()}`), j ? lienJoueur(j) : h('span', null, '—'));
 }
 
 // ---------- Grille de la saison (round robin) ----------
@@ -238,7 +238,7 @@ function vueTableau(t: Tournoi, tab: Tableau | null, type: 'Séries' | 'Consolat
     'div',
     null,
     !saisonFinie ? h('p', { class: 'avertissement' }, 'La saison n’est pas terminée : ce tableau est provisoire (selon le classement actuel).') : null,
-    tab.champion ? h('p', { class: 'champion' }, `🏆 ${type === 'Séries' ? 'Champion des séries' : 'Champion de la consolation'} : `, lienJoueur(tab.champion, false)) : null,
+    tab.champion ? h('p', { class: 'champion' }, type === 'Séries' ? '🏆 Champion des séries : ' : [iconeConsolation(), ' Champion de la consolation : '], lienJoueur(tab.champion, false)) : null,
     h(
       'div',
       { class: 'defile' },

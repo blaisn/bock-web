@@ -464,7 +464,7 @@ progress {
   font-size: 1.05rem;
   font-weight: 650;
 }
-.palme:first-child {
+.palme.vedette {
   background: linear-gradient(135deg, #fff6dc, #f3e3b8);
 }
 .palme.vide {
@@ -889,4 +889,67 @@ button:disabled {
 }
 button.danger:not(:disabled):hover {
   background: var(--defaite-fond);
+}
+
+/* Duel (face-à-face entre deux joueurs) */
+.duel {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1rem;
+  background: var(--papier);
+  border-radius: var(--rayon);
+  box-shadow: var(--ombre);
+  padding: 0.8rem 1.2rem;
+  max-width: 560px;
+}
+.duel-joueur {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  font-size: 1.1rem;
+  font-weight: 650;
+}
+.duel-joueur:last-child {
+  justify-content: flex-end;
+}
+.duel-joueur:first-child {
+  justify-content: flex-start;
+}
+.duel-joueur b {
+  font-family: Georgia, serif;
+  font-size: 2.2rem;
+  color: var(--encre-douce);
+}
+.duel-joueur.mene b {
+  color: var(--victoire);
+}
+.duel-centre {
+  display: grid;
+  justify-items: center;
+  font-size: 0.8rem;
+  color: var(--encre-douce);
+  text-align: center;
+}
+table.donnees tr.gagne td:nth-child(3) {
+  color: var(--victoire);
+}
+table.donnees tr.perd td:nth-child(3) {
+  color: var(--defaite);
+}
+
+/* Icône de la consolation (toilette) : alignée sur le texte comme ★ et 🏆 */
+img.icone-toilette {
+  height: 1.3em;
+  width: auto;
+  vertical-align: -0.2em;
+}
+th img.icone-toilette {
+  height: 1.6em;
+  opacity: 0.85;
+}
+.chiffres span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
 }

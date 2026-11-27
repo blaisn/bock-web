@@ -36,7 +36,7 @@ function route(): Child {
     case 'vie':
       return pageVie();
     case 'face':
-      return pageFace(n(a));
+      return pageFace(n(a), n(b));
     case 'matchs':
       return pageMatchs(a, n(b), n(c));
     case 'reglages':
