@@ -47,6 +47,22 @@ export interface Config {
   versionPubliee?: string;
 }
 
+/** Traduit une réponse d'erreur S3 (XML) en message lisible. */
+function messageS3(statut: number, corps: string): string {
+  const code = /<Code>([^<]+)<\/Code>/.exec(corps)?.[1];
+  const msg = /<Message>([^<]+)<\/Message>/.exec(corps)?.[1];
+  const aide: Record<string, string> = {
+    AccessDenied: 'la clé IAM n’a pas le droit d’écrire ce fichier (vérifiez la politique et le champ « Fichier publié »)',
+    SignatureDoesNotMatch: 'la clé secrète est incorrecte',
+    InvalidAccessKeyId: 'l’Access key ID est inconnu',
+    AuthorizationHeaderMalformed: 'la région saisie n’est pas celle du bucket',
+    PermanentRedirect: 'la région saisie n’est pas celle du bucket',
+    RequestTimeTooSkewed: 'l’horloge de cet ordinateur est décalée',
+    NoSuchBucket: 'ce bucket n’existe pas',
+  };
+  return `HTTP ${statut}${code ? ` ${code}` : ''}${code && aide[code] ? ` : ${aide[code]}` : msg ? ` : ${msg}` : ''}`;
+}
+
 export type EtatPublication = 'à jour' | 'non publié' | 'publication…' | 'erreur' | 'hors ligne' | 'non configuré';
 
 type Ecouteur = () => void;
@@ -74,6 +90,8 @@ class Store {
   /** Incrémenté à chaque changement (sert d'invalidation des caches) */
   revision = 0;
   etatPublication: EtatPublication = 'à jour';
+  /** Message de la dernière publication échouée */
+  erreurPublication?: string;
   derniereLecture?: string;
   erreurLecture?: string;
   /** Violations détectées dans les données locales au démarrage (publication bloquée) */
@@ -247,6 +265,11 @@ class Store {
     this.etatPublication = 'publication…';
     this.notifier();
     try {
+      if (!window.isSecureContext || !globalThis.crypto?.subtle)
+        throw new Error(
+          `Cette page est ouverte en ${location.protocol.replace(':', '')} : la publication exige une adresse https, ` +
+            `par exemple https://${s3.bucket}.s3.${s3.region}.amazonaws.com/index.html`,
+        );
       const aws = new AwsClient({ accessKeyId: s3.accessKeyId, secretAccessKey: s3.secretAccessKey, region: s3.region, service: 's3' });
       const url = `https://${s3.bucket}.s3.${s3.region}.amazonaws.com/${s3.cle.split('/').map(encodeURIComponent).join('/')}`;
       const r = await aws.fetch(url, {
@@ -254,16 +277,21 @@ class Store {
         body: JSON.stringify(this.data),
         headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' },
       });
-      if (!r.ok) throw new Error(`HTTP ${r.status} ${(await r.text()).slice(0, 200)}`);
+      if (!r.ok) throw new Error(messageS3(r.status, await r.text()));
       this.config.versionPubliee = version;
       this.config.dernierePublication = new Date().toISOString();
       ecrireJSON(CLE_CONFIG, this.config);
       this.etatPublication = 'à jour';
+      this.erreurPublication = undefined;
       this.majEtat();
       this.notifier();
       return true;
     } catch (e) {
       console.error('Publication échouée', e);
+      const m = e instanceof Error ? e.message : String(e);
+      this.erreurPublication = /Failed to fetch|NetworkError|Load failed/i.test(m)
+        ? `Requête bloquée par le navigateur (${m}) : réseau coupé, CORS absent sur le bucket, ou nom de bucket contenant des points`
+        : m;
       this.etatPublication = 'erreur';
       this.notifier();
       return false;

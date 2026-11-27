@@ -117,6 +117,7 @@ nav.principale a:hover {
   font-size: 0.8rem;
 }
 .pastille-etat {
+  color: inherit;
   padding: 0.2rem 0.55rem;
   border-radius: 99px;
   background: #ffffff1a;
