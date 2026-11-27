@@ -29,49 +29,6 @@ npm run build      # dist/
 | `public/bock.json` | Données initiales, déployées une seule fois |
 | `aws/` | Politiques IAM et bucket, configuration CORS |
 
-## Les fichiers `bock.json`
-
-Il existe quatre copies des données, chacune avec un rôle précis.
-
-| Copie | Rôle | Qui l'écrit |
-| --- | --- | --- |
-| `data-import/bock.json` | **Référence de la conversion Access.** Utilisée seulement par les tests, avec `access-valeurs.json`. | Le script d'export, une fois. L'application ne l'écrit jamais. |
-| `public/bock.json` | **Données de départ du site.** Copie identique de `data-import/bock.json`, copiée dans `dist/` au build. | Personne, sauf pour réinitialiser l'historique. |
-| `bock.json` dans le bucket | **Copie officielle partagée**, lue par les téléphones toutes les 30 secondes. | `deployer.sh --avec-donnees` (premier déploiement), puis le PC de saisie à chaque publication. |
-| Stockage du navigateur (`localStorage`, clé `bock.donnees`) | **Copie de travail du poste de saisie.** C'est elle qui fait foi. | Chaque saisie sur le PC. Elle est publiée ensuite vers le bucket. |
-
-À noter :
-
-- **Conversion intacte** : c'est `data-import/bock.json`. Une seule retouche y a été faite à la main : les champions inscrits (`championsInscrits`) de 4 tournois (1987, 1989, 1990, 2025), pour reproduire ce qu'Access affichait. La source vraiment brute reste le fichier `.mdb`.
-- **Le stockage du navigateur est propre à chaque adresse** (protocole + domaine + port). L'adresse https du bucket, `http://localhost:5173` et `http://localhost:4173` ont chacune leur copie, indépendante des autres.
-- **Premier lancement du mode saisie** : la copie de travail est initialisée à partir du `bock.json` servi par l'adresse courante.
-
-### En localhost
-
-| Commande | Fichier lu par l'application |
-| --- | --- |
-| `npm run dev` (port 5173) | `public/bock.json` |
-| `npm run preview` (port 4173) | `dist/bock.json`, copié de `public/` au build |
-
-- **En lecture seule**, l'application lit ce fichier local, donc l'historique Access, et non les résultats du bucket.
-- **En mode saisie**, elle en fait une copie dans le stockage de localhost et ne travaille ensuite qu'avec cette copie. Les changements restent en localhost.
-
-> ⚠️ Si vous entrez les clés S3 dans les Réglages de localhost, la publication enverra cette copie de test dans le vrai bucket et **écrasera les résultats officiels**. En développement, laissez les Réglages S3 vides, ou décochez « Publier automatiquement ».
-
-Pour travailler en développement avec les vraies données : sur le PC de saisie, ⚙ Réglages → « Télécharger une sauvegarde », puis en localhost, ⚙ Réglages → « Restaurer une sauvegarde ».
-
-### Circuit en production
-
-```
-data-import ──(copie)──► public ──(build + --avec-donnees, 1 fois)──► bucket
-                                                                        │
-                    PC de saisie (localStorage) ◄──(1er lancement)──────┘
-                              │
-                              └──(publication à chaque saisie)──► bucket ──► téléphones
-```
-
-Les déploiements suivants (`scripts/deployer.sh NOM-DU-BUCKET`, sans `--avec-donnees`) n'envoient jamais `bock.json` : les résultats publiés par le PC ne sont pas touchés.
-
 ## Règles reprises d'Access
 
 - **Classement de saison** :
