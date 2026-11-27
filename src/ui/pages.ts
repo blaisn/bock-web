@@ -12,6 +12,7 @@ const memeMatch = (p: Match, q: Match) =>
 import { store } from '../store';
 import { type Colonne, colonnesFiche, colonnesTitres, iconeConsolation, lienJoueur, lienTournoi, tableTriable, tdFiche, thFiche, titre } from './commun';
 import { editerJoueur, nouveauTournoi } from './edition';
+import { graphiquesFiche } from './graphiques';
 
 // ---------- Tournois ----------
 
@@ -111,6 +112,7 @@ export function pageJoueur(id: number): Child {
       : null,
     h('h2', null, 'Fiche à vie'),
     h('div', { class: 'defile' }, h('table', { class: 'donnees' }, h('thead', null, h('tr', null, h('th', null, ''), thFiche())), h('tbody', null, lignesTypes.filter(([, f]) => f).map(([l, f]) => h('tr', { class: l === 'Total' ? 'total' : '' }, h('th', null, l), tdFiche(f!)))))),
+    tout && tout.fiche.MG + tout.fiche.MP > 0 ? graphiquesFiche(tout.fiche) : null,
     h('h2', null, 'Tournoi par tournoi'),
     h('p', { class: 'discret' }, 'Rang et fiche de la saison régulière, puis résultat en séries ou en consolation.'),
     h(
