@@ -60,6 +60,8 @@ Il existe quatre copies des données, chacune avec un rôle précis.
 
 Pour travailler en développement avec les vraies données : sur le PC de saisie, ⚙ Réglages → « Télécharger une sauvegarde », puis en localhost, ⚙ Réglages → « Restaurer une sauvegarde ».
 
+Le service worker (mode hors ligne) n'est pas actif en localhost : il est désinscrit automatiquement, pour éviter de servir une ancienne version en cache entre deux builds. Le mode hors ligne se teste sur le site déployé en https.
+
 ### Circuit en production
 
 ```

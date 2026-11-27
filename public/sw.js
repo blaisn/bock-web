@@ -1,7 +1,8 @@
 // Service worker : permet au poste de saisie de fonctionner sans connexion.
 // - bock.json et index.html : réseau d'abord, cache en secours
 // - autres fichiers (JS, CSS, icônes) : cache d'abord
-const CACHE = 'bock-v1';
+// Changer ce numéro purge les anciens caches chez tous les utilisateurs
+const CACHE = 'bock-v2';
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './index.html', './favicon.svg'])).then(() => self.skipWaiting()));
@@ -36,13 +37,16 @@ self.addEventListener('fetch', (e) => {
       caches.match(req).then(
         (r) =>
           r ||
-          fetch(req).then((rep) => {
-            if (rep.ok) {
-              const copie = rep.clone();
-              caches.open(CACHE).then((c) => c.put(req, copie));
-            }
-            return rep;
-          }),
+          fetch(req)
+            .then((rep) => {
+              if (rep.ok) {
+                const copie = rep.clone();
+                caches.open(CACHE).then((c) => c.put(req, copie));
+              }
+              return rep;
+            })
+            // Ni en cache ni sur le réseau : réponse d'erreur propre plutôt qu'une promesse rejetée
+            .catch(() => Response.error()),
       ),
     );
   }

@@ -101,6 +101,17 @@ setInterval(majEtat, 15_000);
 contenu.append(h('p', { class: 'discret' }, 'Chargement…'));
 store.demarrer().then(rendre);
 
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  navigator.serviceWorker.register('sw.js').catch((e) => console.warn('Service worker non enregistré', e));
+// Service worker (mode hors ligne) : seulement sur le site déployé.
+// En localhost, il garderait d'anciennes versions en cache entre deux builds : on le désinscrit.
+const enLocal = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+if ('serviceWorker' in navigator) {
+  if (enLocal || !import.meta.env.PROD) {
+    navigator.serviceWorker
+      .getRegistrations()
+      .then((regs) => Promise.all(regs.map((r) => r.unregister())))
+      .then(() => ('caches' in window ? caches.keys() : []))
+      .then((cles) => Promise.all(cles.filter((k) => k.startsWith('bock-')).map((k) => caches.delete(k))));
+  } else {
+    navigator.serviceWorker.register('sw.js').catch((e) => console.warn('Service worker non enregistré', e));
+  }
 }
