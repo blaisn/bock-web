@@ -1,5 +1,5 @@
 // Calculs mémorisés pour l'interface + statistiques à vie
-import type { TypeMatch } from './model';
+import type { Tournoi, TypeMatch } from './model';
 import { rangsTableau, type Tableau } from './engine/bracket';
 import type { LigneClassement } from './engine/classement';
 import { type Fiche, ficheVide, inscrireResultat } from './engine/fiche';
@@ -129,4 +129,62 @@ export function historiqueJoueur(j: number): LigneHistorique[] {
     }
     return lignes;
   });
+}
+
+// ---------- Parcours d'un joueur (évolution, carte de chaleur) ----------
+
+/** Niveaux atteints en séries, du meilleur au moins bon */
+export const NIVEAUX_SERIES = ['Champion', 'Finaliste', 'Demi-finale', 'Quart de finale', 'Huitième de finale', 'Hors séries'] as const;
+export const HORS_SERIES = NIVEAUX_SERIES.length - 1;
+
+export interface EtapeParcours {
+  tournoi: Tournoi;
+  present: boolean;
+  rang?: number;
+  nbParticipants?: number;
+  /** Rang de saison normalisé : 100 = premier, 0 = dernier */
+  norm?: number;
+  /** Indice dans NIVEAUX_SERIES (undefined = résultat inconnu, ex. séries pas encore jouées) */
+  niveauSeries?: number;
+  champSaison: boolean;
+  champSeries: boolean;
+  champConsolation: boolean;
+}
+
+function niveauDepuisRang(r: number): number {
+  if (r <= 1) return 0;
+  if (r === 2) return 1;
+  if (r <= 4) return 2;
+  if (r <= 8) return 3;
+  return 4;
+}
+
+/** Une étape par tournoi, en ordre chronologique (présent ou non). */
+export function parcoursJoueur(j: number): EtapeParcours[] {
+  return memo(`parcours-${j}`, () =>
+    [...store.data.tournois]
+      .sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id)
+      .map((t) => {
+        const cl = classement(t.id);
+        const l = cl.find((x) => x.joueur === j);
+        const c = champions(t.id);
+        const e: EtapeParcours = { tournoi: t, present: Boolean(l), champSaison: c.saison === j, champSeries: c.series === j, champConsolation: c.consolation === j };
+        if (!l) return e;
+        e.rang = l.rang;
+        e.nbParticipants = cl.length;
+        e.norm = cl.length > 1 ? Math.round((1 - (l.rang - 1) / (cl.length - 1)) * 100) : 100;
+        const qualifie = l.rang <= t.nbJoueursSeries;
+        if (e.champSeries) e.niveauSeries = 0;
+        else if (!qualifie) e.niveauSeries = HORS_SERIES;
+        else if (t.typeSeries === 'ronde') {
+          const rs = classement(t.id, 'Séries').find((x) => x.joueur === j);
+          if (rs) e.niveauSeries = niveauDepuisRang(rs.rang);
+        } else {
+          const ts = tableau(t.id, 'Séries');
+          const r = ts ? rangsTableau(ts).get(j) : undefined;
+          if (r !== undefined) e.niveauSeries = niveauDepuisRang(r);
+        }
+        return e;
+      }),
+  );
 }

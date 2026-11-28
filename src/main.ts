@@ -3,6 +3,7 @@ import { h, vider, type Child } from './dom';
 import { ilYa } from './format';
 import { store } from './store';
 import { pageFace, pageJoueur, pageJoueurs, pageMatchs, pageTournois, pageVie } from './ui/pages';
+import { pageHistorique } from './ui/historique';
 import { pageReglages } from './ui/reglages';
 import { pageTournoi } from './ui/tournoi';
 
@@ -14,6 +15,7 @@ const NAV: [string, string][] = [
   ['#/', 'Tournois'],
   ['#/joueurs', 'Joueurs'],
   ['#/vie', 'À vie'],
+  ['#/historique', 'Historique'],
   ['#/face', 'Face-à-face'],
   ['#/matchs', 'Matchs'],
   ['#/reglages', '⚙'],
@@ -35,6 +37,8 @@ function route(): Child {
       return pageJoueur(Number(a));
     case 'vie':
       return pageVie();
+    case 'historique':
+      return pageHistorique();
     case 'face':
       return pageFace(n(a), n(b));
     case 'matchs':

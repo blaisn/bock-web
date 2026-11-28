@@ -1,5 +1,5 @@
 // Pages : tournois, joueurs, fiche d'un joueur, classement à vie, face-à-face, matchs
-import { champions, classement, faceAFace, type FaceAFace, historiqueJoueur, joueur, nom, nomCourt, statsVie, type StatsVie, tournoisRecentsDabord } from '../calc';
+import { champions, classement, faceAFace, type FaceAFace, historiqueJoueur, joueur, parcoursJoueur, nom, nomCourt, statsVie, type StatsVie, tournoisRecentsDabord } from '../calc';
 import { avis, h, modale, type Child } from '../dom';
 import { blocageMatch } from '../engine/integrite';
 import { cote, type Fiche, ficheVide, pourcentPoints } from '../engine/fiche';
@@ -12,7 +12,7 @@ const memeMatch = (p: Match, q: Match) =>
 import { store } from '../store';
 import { type Colonne, colonnesFiche, colonnesTitres, iconeConsolation, lienJoueur, lienTournoi, tableTriable, tdFiche, thFiche, titre } from './commun';
 import { editerJoueur, nouveauTournoi } from './edition';
-import { graphiquesFiche } from './graphiques';
+import { graphiqueEvolution, graphiquesFiche } from './graphiques';
 
 // ---------- Tournois ----------
 
@@ -113,6 +113,7 @@ export function pageJoueur(id: number): Child {
     h('h2', null, 'Fiche à vie'),
     h('div', { class: 'defile' }, h('table', { class: 'donnees' }, h('thead', null, h('tr', null, h('th', null, ''), thFiche())), h('tbody', null, lignesTypes.filter(([, f]) => f).map(([l, f]) => h('tr', { class: l === 'Total' ? 'total' : '' }, h('th', null, l), tdFiche(f!)))))),
     tout && tout.fiche.MG + tout.fiche.MP > 0 ? graphiquesFiche(tout.fiche) : null,
+    hist.length > 1 ? graphiqueEvolution(parcoursJoueur(id)) : null,
     h('h2', null, 'Tournoi par tournoi'),
     h('p', { class: 'discret' }, 'Rang et fiche de la saison régulière, puis résultat en séries ou en consolation.'),
     h(
