@@ -84,6 +84,9 @@ function ecrireJSON(cle: string, v: unknown): void {
   }
 }
 
+/** Adresse complète du fichier de données lu par les téléphones */
+export const urlDonnees = () => new URL(URL_DONNEES, location.href).href;
+
 class Store {
   data: BockData = { version: 1, joueurs: [], tournois: [], participations: [], matchs: [] };
   config: Config = lireJSON<Config>(CLE_CONFIG) ?? { saisie: false, autoPublier: true };
@@ -116,7 +119,8 @@ class Store {
   async demarrer(): Promise<void> {
     if (this.saisie) {
       const local = lireJSON<BockData>(CLE_DONNEES);
-      if (local) {
+      // Une copie locale vide (ex. saisie activée avant le chargement) ne compte pas : on relit le serveur
+      if (local?.tournois?.length) {
         this.data = local;
         this.erreursLocales = verifierIntegrite(local);
         if (this.erreursLocales.length)
@@ -135,9 +139,25 @@ class Store {
   /** Lit bock.json sur le serveur. */
   async chargerServeur(silencieux = false): Promise<boolean> {
     try {
-      const r = await fetch(`${URL_DONNEES}?t=${Date.now()}`, { cache: 'no-store' });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const d = (await r.json()) as BockData;
+      let r: Response;
+      try {
+        r = await fetch(`${URL_DONNEES}?t=${Date.now()}`, { cache: 'no-store' });
+      } catch {
+        throw new Error('pas de connexion, ou requête bloquée par le navigateur');
+      }
+      if (!r.ok) {
+        const raisons: Record<number, string> = {
+          403: 'accès refusé : le fichier n’est pas lisible publiquement (politique du bucket ?)',
+          404: 'fichier introuvable : bock.json n’est pas à côté de index.html',
+        };
+        throw new Error(`HTTP ${r.status} — ${raisons[r.status] ?? 'erreur du serveur'}`);
+      }
+      let d: BockData;
+      try {
+        d = (await r.json()) as BockData;
+      } catch {
+        throw new Error('le fichier n’est pas un JSON valide');
+      }
       const erreurs = verifierIntegrite(d);
       if (erreurs.length) {
         console.warn('bock.json invalide', erreurs);
@@ -156,7 +176,7 @@ class Store {
       }
       return true;
     } catch (e) {
-      this.erreurLecture = String(e);
+      this.erreurLecture = e instanceof Error ? e.message : String(e);
       if (!silencieux) this.notifier();
       return false;
     }
@@ -215,7 +235,10 @@ class Store {
 
   activerSaisie(oui: boolean): void {
     this.sauverConfig({ saisie: oui });
-    if (oui) ecrireJSON(CLE_DONNEES, this.data);
+    // N'enregistrer comme copie de travail que des données réellement chargées ;
+    // sinon le prochain démarrage relira le serveur
+    if (oui && this.data.tournois.length) ecrireJSON(CLE_DONNEES, this.data);
+    else if (oui) localStorage.removeItem(CLE_DONNEES);
     location.reload();
   }
 

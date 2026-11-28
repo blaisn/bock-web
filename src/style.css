@@ -1240,3 +1240,56 @@ table.chaleur thead th a {
   background: repeating-linear-gradient(45deg, transparent 0 3px, #d9cdb9 3px 4px);
   outline: 1px solid var(--ligne);
 }
+
+/* Lecture seule sans données */
+.sans-donnees {
+  max-width: 640px;
+  background: var(--papier);
+  border-radius: var(--rayon);
+  box-shadow: var(--ombre);
+  padding: 1.2rem 1.4rem;
+  margin-top: 1rem;
+}
+.sans-donnees h1 {
+  font-size: 1.3rem;
+  margin-top: 0;
+}
+.sans-donnees code {
+  word-break: break-all;
+  font-size: 0.85rem;
+  background: var(--fond);
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+}
+.erreur-detail {
+  color: var(--defaite);
+  font-weight: 600;
+}
+.sans-donnees pre.pile {
+  font-size: 0.72rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+  background: var(--fond);
+  padding: 0.5rem;
+  border-radius: 6px;
+  color: var(--encre-douce);
+}
+.bandeau-erreur {
+  background: var(--defaite);
+  color: #fff;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+}
+.bandeau-erreur a {
+  color: #fff;
+  text-decoration: underline;
+}
+details.avance {
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--ligne);
+  padding-top: 0.8rem;
+}
+details.avance summary {
+  cursor: pointer;
+  color: var(--encre-douce);
+}

@@ -1,7 +1,7 @@
 import './style.css';
 import { h, vider, type Child } from './dom';
 import { ilYa } from './format';
-import { store } from './store';
+import { store, urlDonnees } from './store';
 import { pageFace, pageJoueur, pageJoueurs, pageMatchs, pageTournois, pageVie } from './ui/pages';
 import { pageHistorique } from './ui/historique';
 import { pageReglages } from './ui/reglages';
@@ -76,6 +76,48 @@ function majEtat() {
   }
 }
 
+/** Lecture seule sans données : on explique pourquoi au lieu d'afficher des pages vides. */
+function pageSansDonnees() {
+  return h(
+    'div',
+    { class: 'sans-donnees' },
+    h('h1', null, 'Impossible de lire les résultats'),
+    h('p', null, 'L’application n’a pas pu récupérer le fichier des résultats :'),
+    h('p', null, h('code', null, urlDonnees())),
+    h('p', { class: 'erreur-detail' }, store.erreurLecture),
+    h(
+      'div',
+      { class: 'boutons' },
+      h('button', { type: 'button', class: 'principal', onclick: () => void store.chargerServeur() }, 'Réessayer'),
+      h('a', { href: urlDonnees(), class: 'bouton', target: '_blank', rel: 'noopener' }, 'Ouvrir le fichier directement'),
+    ),
+    h('p', { class: 'discret' }, 'Une nouvelle tentative est faite automatiquement toutes les 30 secondes.'),
+  );
+}
+
+/** Erreur JavaScript : affichée à l'écran (utile sur téléphone, sans console). */
+function pageErreur(e: unknown) {
+  const err = e instanceof Error ? e : new Error(String(e));
+  return h(
+    'div',
+    { class: 'sans-donnees' },
+    h('h1', null, 'Erreur d’affichage'),
+    h('p', null, 'Une erreur empêche d’afficher cette page. Faites une capture d’écran de ce message :'),
+    h('p', { class: 'erreur-detail' }, err.message),
+    h('pre', { class: 'pile' }, (err.stack ?? '').split('\n').slice(0, 6).join('\n')),
+    h('p', { class: 'discret' }, `${navigator.userAgent} · ${store.data.tournois.length} tournois chargés`),
+    h('div', { class: 'boutons' }, h('button', { type: 'button', class: 'principal', onclick: () => location.reload() }, 'Recharger')),
+  );
+}
+
+// Erreurs hors rendu (ex. au démarrage) : bandeau en haut de page
+window.addEventListener('error', (ev) => afficherBandeau(ev.message));
+window.addEventListener('unhandledrejection', (ev) => afficherBandeau(String(ev.reason?.message ?? ev.reason)));
+function afficherBandeau(message: string) {
+  if (document.querySelector('.bandeau-erreur')) return;
+  document.body.prepend(h('div', { class: 'bandeau-erreur', role: 'alert' }, '⚠ Erreur : ', message, ' — ', h('a', { href: '#', onclick: (e: Event) => { e.preventDefault(); location.reload(); } }, 'recharger')));
+}
+
 let dernierHash = '';
 function rendre() {
   majNav();
@@ -84,7 +126,14 @@ function rendre() {
   const y = window.scrollX === 0 ? window.scrollY : 0;
   // Conserver le défilement horizontal des grilles lors d'une mise à jour
   const defil = [...contenu.querySelectorAll<HTMLElement>('.defile')].map((e) => e.scrollLeft);
-  vider(contenu, route());
+  let page;
+  try {
+    page = !store.saisie && !store.data.tournois.length && store.erreurLecture ? pageSansDonnees() : route();
+  } catch (e) {
+    console.error(e);
+    page = pageErreur(e);
+  }
+  vider(contenu, page);
   if (memeePage) {
     window.scrollTo(0, y);
     contenu.querySelectorAll<HTMLElement>('.defile').forEach((e, i) => (e.scrollLeft = defil[i] ?? 0));

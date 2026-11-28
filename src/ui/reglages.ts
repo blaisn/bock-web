@@ -19,19 +19,30 @@ export function pageReglages(): Child {
       h('p', { class: 'discret' }, resume, store.derniereLecture ? ` · dernière lecture ${ilYa(store.derniereLecture)}` : '', store.erreurLecture ? ` · erreur : ${store.erreurLecture}` : ''),
       h('h2', null, 'Sauvegarde'),
       h('div', { class: 'boutons' }, h('button', { type: 'button', onclick: exporter }, 'Télécharger les données (JSON)')),
-      h('h2', null, 'Poste de saisie'),
-      h('p', null, 'Activez le mode saisie seulement sur le PC qui enregistre les résultats. Les données seront alors conservées dans ce navigateur et publiées dans le bucket S3.'),
       h(
-        'button',
-        {
-          type: 'button',
-          onclick: () =>
-            modale('Activer la saisie sur cet appareil ?', h('p', null, 'Les données publiées seront copiées dans ce navigateur, qui deviendra le poste de saisie. N’activez ce mode que sur un seul appareil.'), [
-              { texte: 'Annuler', action: () => {} },
-              { texte: 'Activer', classe: 'principal', action: () => store.activerSaisie(true) },
-            ]),
-        },
-        'Activer le mode saisie',
+        'details',
+        { class: 'avance' },
+        h('summary', null, 'Réservé à l’organisateur : poste de saisie'),
+        h(
+          'p',
+          { class: 'avertissement' },
+          'À activer seulement sur le PC qui enregistre les résultats. Sur un téléphone de participant, ne l’activez pas : ',
+          'l’appareil cesserait d’afficher les résultats publiés et montrerait sa propre copie.',
+        ),
+        h(
+          'button',
+          {
+            type: 'button',
+            disabled: !store.data.tournois.length,
+            title: store.data.tournois.length ? '' : 'Les données publiées doivent d’abord être chargées',
+            onclick: () =>
+              modale('Activer la saisie sur cet appareil ?', h('p', null, 'Les données publiées seront copiées dans ce navigateur, qui deviendra le poste de saisie. N’activez ce mode que sur le PC de l’organisateur.'), [
+                { texte: 'Annuler', action: () => {} },
+                { texte: 'Activer', classe: 'principal', action: () => store.activerSaisie(true) },
+              ]),
+          },
+          'Activer le mode saisie',
+        ),
       ),
     );
   }
@@ -49,6 +60,14 @@ export function pageReglages(): Child {
     null,
     titre('Réglages'),
     h('p', null, 'Cet appareil est le ', h('b', null, 'poste de saisie'), '. Les données sont conservées dans ce navigateur, même sans connexion.'),
+    !store.config.s3
+      ? h(
+          'p',
+          { class: 'avertissement' },
+          'La publication n’est pas configurée. Si cet appareil n’est pas le PC de l’organisateur, repassez en lecture seule pour voir les résultats publiés : ',
+          h('button', { type: 'button', class: 'mini', onclick: () => store.activerSaisie(false) }, 'Repasser en lecture seule'),
+        )
+      : null,
     h('p', { class: 'discret' }, resume),
     store.erreursLocales.length
       ? h('p', { class: 'avertissement' }, `${store.erreursLocales.length} problème(s) d’intégrité dans les données de ce navigateur : la publication est bloquée. `, h('button', { type: 'button', class: 'mini', onclick: () => signalerErreurs('Problèmes d’intégrité', store.erreursLocales) }, 'Voir'))
